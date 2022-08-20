@@ -2,7 +2,8 @@ import pytest
 from ape import chain
 from ape.types import ContractLog
 from eth_account.messages import encode_structured_data
-from utils.constants import MAX_INT, ROLES
+from utils.constants import MAX_INT, ROLES, WEEK
+
 
 # Accounts
 
@@ -103,16 +104,26 @@ def create_token(project, gov):
 
 
 @pytest.fixture(scope="session")
-def create_vault(project, gov, fee_manager):
-    def create_vault(asset, governance=gov, deposit_limit=MAX_INT):
-        vault = gov.deploy(project.VaultV3, asset, "VaultV3", "AV", governance)
+def create_vault(project, gov, fee_manager, flexible_fee_manager):
+    def create_vault(
+        asset,
+        fee_manager=fee_manager,
+        governance=gov,
+        deposit_limit=MAX_INT,
+        max_profit_locking_time=WEEK,
+    ):
+        vault = gov.deploy(
+            project.VaultV3, asset, "VaultV3", "AV", governance, max_profit_locking_time
+        )
         # set vault deposit
         vault.set_deposit_limit(deposit_limit, sender=gov)
         # set up fee manager
         vault.set_fee_manager(fee_manager.address, sender=gov)
 
         vault.set_role(
-            gov.address, ROLES.STRATEGY_MANAGER | ROLES.DEBT_MANAGER, sender=gov
+            gov.address,
+            ROLES.STRATEGY_MANAGER | ROLES.DEBT_MANAGER | ROLES.ACCOUNTING_MANAGER,
+            sender=gov,
         )
 
         return vault
@@ -185,6 +196,12 @@ def lossy_strategy(gov, vault, create_lossy_strategy):
 def fee_manager(project, gov):
     fee_manager = gov.deploy(project.FeeManager)
     yield fee_manager
+
+
+@pytest.fixture(scope="session")
+def flexible_fee_manager(project, gov):
+    flexible_fee_manager = gov.deploy(project.FlexibleFeeManager)
+    yield flexible_fee_manager
 
 
 @pytest.fixture(scope="session")

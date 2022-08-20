@@ -1,5 +1,7 @@
 # @version 0.3.4
 
+# FeeManager without any fee threshold
+
 from vyper.interfaces import ERC20
 
 # INTERFACES #
@@ -40,7 +42,6 @@ struct Fee:
 
 # CONSTANTS #
 MAX_BPS: constant(uint256) = 10_000
-MAX_SHARE: constant(uint256) = 7_500
 # NOTE: A four-century period will be missing 3 of its 100 Julian leap years, leaving 97.
 #       So the average year has 365 + 97/400 = 365.2425 days
 #       ERROR(Julian): -0.0078
@@ -81,12 +82,6 @@ def assess_fees(strategy: address, gain: uint256) -> uint256:
     performance_fee: uint256 = (gain * fee.performance_fee) / MAX_BPS
     total_fee: uint256 = management_fee + performance_fee
 
-    # ensure fee does not exceed more than 75% of gain
-    maximum_fee: uint256 = (gain * MAX_SHARE) / MAX_BPS
-    # test with min?
-    if total_fee > maximum_fee:
-        total_fee = maximum_fee
-
     return total_fee
 
 
@@ -101,7 +96,6 @@ def distribute(vault: ERC20):
 @external
 def set_performance_fee(vault: address, performance_fee: uint256):
     assert msg.sender == self.fee_manager, "not fee manager"
-    assert performance_fee <= self._performance_fee_threshold(), "exceeds performance fee threshold"
     self.fees[vault].performance_fee = performance_fee
     log UpdatePerformanceFee(performance_fee)
 
@@ -109,7 +103,6 @@ def set_performance_fee(vault: address, performance_fee: uint256):
 @external
 def set_management_fee(vault: address, management_fee: uint256):
     assert msg.sender == self.fee_manager, "not fee manager"
-    assert management_fee <= self._management_fee_threshold(), "exceeds management fee threshold"
     self.fees[vault].management_fee = management_fee
     log UpdateManagementFee(management_fee)
 
@@ -128,27 +121,3 @@ def apply_fee_manager():
     future_fee_manager: address = self.future_fee_manager
     self.fee_manager = future_fee_manager
     log ApplyFeeManager(future_fee_manager)
-
-
-@view
-@external
-def performance_fee_threshold() -> uint256:
-    return self._performance_fee_threshold()
-
-
-@view
-@internal
-def _performance_fee_threshold() -> uint256:
-    return MAX_BPS / 2
-
-
-@view
-@external
-def management_fee_threshold() -> uint256:
-    return self._management_fee_threshold()
-
-
-@view
-@internal
-def _management_fee_threshold() -> uint256:
-    return MAX_BPS

@@ -1,7 +1,7 @@
 import ape
 import pytest
 from utils import checks
-from utils.constants import MAX_INT, ZERO_ADDRESS
+from utils.constants import MAX_INT, ZERO_ADDRESS, WEEK
 
 
 def test_deposit__with_invalid_recipient__reverts(fish, asset, create_vault):
@@ -18,7 +18,7 @@ def test_deposit__with_zero_funds__reverts(fish, asset, create_vault):
     vault = create_vault(asset)
     amount = 0
 
-    with ape.reverts("cannot deposit zero"):
+    with ape.reverts("cannot mint zero"):
         vault.deposit(amount, fish.address, sender=fish)
 
 
@@ -135,7 +135,7 @@ def test_mint__with_zero_funds__reverts(fish, asset, create_vault):
     vault = create_vault(asset)
     shares = 0
 
-    with ape.reverts("cannot deposit zero"):
+    with ape.reverts("cannot mint zero"):
         vault.mint(shares, fish.address, sender=fish)
 
 
@@ -234,7 +234,7 @@ def test_withdraw__with_insufficient_shares__reverts(
 
     user_deposit(fish, vault, asset, amount)
 
-    with ape.reverts("insufficient shares to withdraw"):
+    with ape.reverts("insufficient shares to redeem"):
         vault.withdraw(shares, fish.address, fish.address, sender=fish)
 
 
@@ -242,7 +242,7 @@ def test_withdraw__with_no_shares__reverts(fish, asset, create_vault):
     vault = create_vault(asset)
     shares = 0
 
-    with ape.reverts("no shares to withdraw"):
+    with ape.reverts("no shares to redeem"):
         vault.withdraw(shares, fish.address, fish.address, sender=fish)
 
 
@@ -361,7 +361,7 @@ def test_redeem__with_insufficient_shares__reverts(
 
     user_deposit(fish, vault, asset, amount)
 
-    with ape.reverts("insufficient shares to withdraw"):
+    with ape.reverts("insufficient shares to redeem"):
         vault.redeem(redemption_amount, fish.address, fish.address, sender=fish)
 
 
@@ -369,7 +369,7 @@ def test_redeem__with_no_shares__reverts(fish, asset, create_vault):
     vault = create_vault(asset)
     amount = 0
 
-    with ape.reverts("no shares to withdraw"):
+    with ape.reverts("no shares to redeem"):
         vault.withdraw(amount, fish.address, fish.address, sender=fish)
 
 
@@ -484,7 +484,7 @@ def test_redeem__with_maximum_redemption__redeem_all(
 @pytest.mark.parametrize("deposit_limit", [0, 10**18, MAX_INT])
 def test_set_deposit_limit__with_deposit_limit(project, gov, asset, deposit_limit):
     # TODO unpermissioned set deposit limit test
-    vault = gov.deploy(project.VaultV3, asset, "VaultV3", "AV", gov)
+    vault = gov.deploy(project.VaultV3, asset, "VaultV3", "AV", gov, WEEK)
 
     tx = vault.set_deposit_limit(deposit_limit, sender=gov)
     event = list(tx.decode_logs(vault.UpdateDepositLimit))
